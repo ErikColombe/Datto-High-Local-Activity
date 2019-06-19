@@ -1,0 +1,94 @@
+Public Sub High_Availability()
+Dim xWb As Workbook
+Dim xStrDate As String
+Dim bRfresh As Boolean
+Dim newsheet As String
+Dim xConnect As Object
+Dim element As Range
+Dim lastRow As Long
+Application.DisplayAlerts = False
+Set xWb = ActiveWorkbook
+xStrDate = Format(Now, "mm-dd-yy hh.mm.ss") 'format for how you want the sheet to look
+
+'First grab the xml file from datto, run your query to get desired column. This with statement
+'is used to pause the rest of the code until the query is done
+  With ActiveWorkbook.Connections("Name of your query here").OLEDBConnection 'name of the query that you've set up in excel
+
+        bRfresh = .BackgroundQuery
+        .BackgroundQuery = False
+        .Refresh
+        .BackgroundQuery = bRfresh
+
+    End With
+
+
+'Created a sheet called Datto Query where the query is being actively loaded and copying the information
+'with todays date after sheet two
+    ActiveWorkbook.Sheets("Datto Query").Copy After:=Workbooks("Datto High Local Activity.xlsm").Sheets(2)
+    ActiveSheet.Name = xStrDate
+    ActiveWorkbook.Queries("("Name of your query here (2)").Delete
+
+'Delete the extra connections that aren't needed with each run
+    For Each xConnect In ActiveWorkbook.Connections
+    If xConnect.Name > "("Name of your query here" Then xConnect.Delete
+    Next xConnect
+
+
+'This section works if the "Grew More than 50%' and the "Datto Query" sheets are in the first and second position in the workbook respectively.
+
+    lastRow = Sheets("Datto Query").Range("F" & Rows.Count).End(xlUp).Row
+    Sheets("Grew More than 50%").Range("A1:A" & lastRow).Value = Sheets("Datto Query").Range("H1:H" & lastRow).Value
+    Sheets("Grew More than 50%").Range("B1:B" & lastRow).Value = Sheets(4).Range("H1:H" & lastRow).Value
+    Sheets("Grew More than 50%").Range("C1:C" & lastRow).Value = Sheets(4).Range("K1:K" & lastRow).Value
+    Sheets("Grew More than 50%").Range("H1:H" & lastRow).Value = Sheets(4).Range("B1:B" & lastRow).Value
+    Sheets("Grew More than 50%").Range("I1:I" & lastRow).Value = Sheets(4).Range("C1:C" & lastRow).Value
+    
+  
+
+    Sheets("Grew More than 50%").Range("J1").Value = "Growth"
+    Sheets("Grew More than 50%").Range("B1").Value = "Total Space Used previously"
+    Sheets("Grew More than 50%").Range("C1").Value = "50% of Protected"
+
+
+       For Each element In Sheets("Grew More than 50%").Range("C3:C" & lastRow)
+    If IsNumeric(element.Value) Then
+        element.Value = element.Value / 1024 'Convert to gigabytes
+    End If
+Next
+               For Each element In Sheets("Grew More than 50%").Range("A3:A" & lastRow)
+    If IsNumeric(element.Value) Then
+        element.Value = element.Value / 1024 'Convert to gigabytes
+    End If
+Next
+
+       For Each element In Sheets("Grew More than 50%").Range("B3:B" & lastRow)
+    If IsNumeric(element.Value) Then
+        element.Value = element.Value / 1024 'Convert to gigabytes
+    End If
+Next
+
+
+'Create ranges for the two columns and then loop through them to determine if Range j is greater than range c.
+'If it is turn the cell red else turn it green
+    
+lROW = Range("J" & Rows.Count).End(xlUp).Row
+cROW = Range("C" & Rows.Count).End(xlUp).Row
+Set MR = Sheets("Grew More than 50%").Range("J3:J" & lROW)
+Set DR = Sheets("Grew More than 50%").Range("C3:C" & cROW)
+Dim j As Range
+Dim c As Range
+For Each j In MR
+For Each c In DR
+If j.Cells.Value > c.Cells.Value Then
+j.Cells.Interior.ColorIndex = 3 'red
+ElseIf j.Cells.Value <= c.Cells.Value Then
+j.Cells.Interior.ColorIndex = 4  'green
+
+Exit For
+End If
+Next
+Next
+  
+End Sub
+
+
